@@ -118,21 +118,8 @@
 
 
 
-; Parte el stream plano en sublistas, una por línea (separadas por "newline")
-(define (split-by-newline token-stream)
-  (let loop ([rem token-stream] [cur '()] [result '()])
-    (cond
-      [(null? rem)
-       (reverse (if (null? cur) result (cons (reverse cur) result)))]
-      [(equal? (first (first rem)) "newline")
-       (loop (rest rem) '() (cons (reverse cur) result))]
-      [else
-       (loop (rest rem) (cons (first rem) cur) result)])))
 
-; build-automata: lista-de-tokens -> hash
-; Recibe el stream YA computado por tokenize-all y construye el hash del autómata.
-; No re-tokeniza nada.
-(define (build-automata token-stream)
-  (foldl representar-automata (hash) (split-by-newline token-stream)))
 
-   (provide tokenize-line tokenize-all tokens->html error-tokens? build-automata)
+
+
+   (provide tokenize-line tokenize-all tokens->html error-tokens?)
