@@ -1,0 +1,10 @@
+# Archivos generados por el programa
+*.png
+*.dot
+
+
+# Zip de distribución
+*.zip
+
+# Caché de compilación de Racket
+compiled/
