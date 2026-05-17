@@ -1,38 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>DFA Editor</title>
+    <style>
+        body      { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; margin: 0; }
+        h1, h3    { color: #9cdcfe; }
+        textarea,
+        input[type="text"] {
+            width: 100%; box-sizing: border-box;
+            background: #2d2d2d; color: #d4d4d4;
+            border: 1px solid #555; padding: 8px;
+            font-family: monospace; font-size: 14px;
+        }
+        button {
+            background: #0e639c; color: white;
+            border: none; padding: 8px 20px;
+            cursor: pointer; margin-top: 8px; font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        iframe { width: 100%; height: 250px; border: 1px solid #444; margin-top: 10px; }
+        #validacion-result { margin-top: 10px; padding: 10px; font-size: 1.1em; }
+        .aceptada { color: #4ec9b0; font-weight: bold; }
+        .rechazada { color: #f44747; font-weight: bold; }
+        hr { border-color: #444; margin: 20px 0; }
+    </style>
 </head>
 <body>
 
-    <h1>RACKET HELLO APP</h1>
-    <textarea id="textbox" rows="10" cols="50"></textarea>
-    <br>
-    <button onclick="run()">RUN</button>
+<h1>DFA Editor</h1>
 
-    <iframe id="resultado-frame" style="width:100%; height:300px; border:1px solid #444; margin-top:10px;"></iframe>
-    <div id="img-output" style="margin-top:10px;"></div>
+<textarea id="textbox" rows="10" placeholder="# Ejemplo de automata
+states: [q0, q1, q2]
+input_alphabet: [a, b]
+start_state: q0
+accept_states: [q2]
+delta:
+- q0 : a : q1
+- q1 : b : q2
+- q2 : a : q2"></textarea>
+<br>
+<button onclick="compilar()">Compilar y dibujar</button>
+
+<iframe id="resultado-frame"></iframe>
+<div id="img-output"></div>
+
+<hr>
+
+<h3>Validar cadena</h3>
+<input id="cadena" type="text" placeholder="Ingresa una cadena (ej: ab)">
+<br>
+<button onclick="validar()">Validar</button>
+<div id="validacion-result"></div>
 
 </body>
 </html>
 
-
 <script>
-    async function run() {
+    async function enviar(cadena) {
         const text = document.getElementById("textbox").value;
-
         const response = await fetch("/", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ input: text })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ input: text, cadena: cadena })
         });
+        return response.json();
+    }
 
-        const data = await response.json();
-
+    async function compilar() {
+        const data = await enviar("");
         document.getElementById("resultado-frame").srcdoc = data.resultado;
         document.getElementById("img-output").innerHTML =
-            "<img src='data:image/png;base64," + data.imagen + "'>";
+            data.imagen ? "<img src='data:image/png;base64," + data.imagen + "'>" : "";
+        document.getElementById("validacion-result").innerHTML = "";
+    }
+
+    async function validar() {
+        const cadena = document.getElementById("cadena").value;
+        const data = await enviar(cadena);
+        document.getElementById("resultado-frame").srcdoc = data.resultado;
+        document.getElementById("img-output").innerHTML =
+            data.imagen ? "<img src='data:image/png;base64," + data.imagen + "'>" : "";
+
+        const div = document.getElementById("validacion-result");
+        if (data.valido === true) {
+            div.innerHTML = "<span class='aceptada'>✓ Cadena ACEPTADA: \"" + cadena + "\"</span>";
+        } else if (data.valido === false) {
+            div.innerHTML = "<span class='rechazada'>✗ Cadena RECHAZADA: \"" + cadena + "\"</span>";
+        } else {
+            div.innerHTML = "";
+        }
     }
 </script>

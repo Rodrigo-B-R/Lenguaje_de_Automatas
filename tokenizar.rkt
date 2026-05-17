@@ -3,7 +3,6 @@
 ;funciones para obtener tokens
 
 (define reMatch regexp-match-positions)
-(require "automaton-simulation.rkt")
 
 
 

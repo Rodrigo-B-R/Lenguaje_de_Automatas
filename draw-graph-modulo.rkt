@@ -1,40 +1,60 @@
 #lang racket
 
+(require racket/system)
+(require racket/runtime-path)
+(require net/base64)
 
-(require racket/system)       ; para el comando en terminal
-(require racket/runtime-path) ; para manejo de rutas
-(require net/base64)          ; para encoding de imagen
-
-; esto establece la ruta actual
 (define-runtime-path here ".")
 (current-directory here)
 (displayln (format "DIR: ~a" (current-directory)))
 
-; devuelve el contenido del .dot
-(define (genera-dot automata-rep)
-    (define dot-text
-      "digraph DFA {
-        rankdir=LR;
+; Genera las lineas de transicion: q0 -> q1 [label="a"];
+(define (transition-lines automata states)
+  (apply string-append
+         (map (lambda (state)
+                (if (hash-has-key? automata state)
+                    (let ([delta-map (hash-ref automata state)])
+                      (apply string-append
+                             (map (lambda (sym)
+                                    (format "  ~a -> ~a [label=\"~a\"];\n"
+                                            state
+                                            (hash-ref delta-map sym)
+                                            (symbol->string sym)))
+                                  (hash-keys delta-map))))
+                    ""))
+              states)))
 
-        start -> q0 [label=\"\"];
-        q0 -> q1 [label=\"a\"];
-        q1 -> q2 [label=\"b\"];
-        q2 -> q2 [label=\"a,b\"];
+; Genera las declaraciones de forma de cada estado
+(define (shape-lines states finals)
+  (apply string-append
+         (map (lambda (state)
+                (if (member state finals)
+                    (format "  ~a [shape=doublecircle];\n" state)
+                    (format "  ~a [shape=circle];\n" state)))
+              states)))
 
-        start [shape=plaintext];
-        q1 [shape=doublecircle];
-        q2 [shape=doublecircle];    }"
-    )
-    dot-text
-)
+; automata hash -> string en formato .dot
+(define (genera-dot automata)
+  (define start  (hash-ref automata "iniciales" "?"))
+  (define finals (hash-ref automata "finales"   '()))
+  (define states (hash-ref automata "states"    '()))
+  (string-append
+   "digraph DFA {\n"
+   "  rankdir=LR;\n"
+   (format "  start -> ~a [label=\"\"];\n" start)
+   (transition-lines automata states)
+   "  start [shape=plaintext];\n"
+   (shape-lines states finals)
+   "}\n"))
 
-(define (genera-imagen automata-rep)
-    (define dot-text (genera-dot automata-rep))
-    (parameterize ([current-directory here])
-      (call-with-output-file "dfa.dot" #:exists 'replace
-                             (lambda (out) (display dot-text out)))
-      (system "dot -Tpng dfa.dot -o dfa.png")
-      (displayln "dfa.png generated")
-      (bytes->string/latin-1 (base64-encode (file->bytes "dfa.png"))))
-)
+; automata hash -> string base64 del PNG generado
+(define (genera-imagen automata)
+  (define dot-text (genera-dot automata))
+  (parameterize ([current-directory here])
+    (call-with-output-file "dfa.dot" #:exists 'replace
+                           (lambda (out) (display dot-text out)))
+    (system "dot -Tpng dfa.dot -o dfa.png")
+    (displayln "dfa.png generated")
+    (bytes->string/latin-1 (base64-encode (file->bytes "dfa.png")))))
+
 (provide genera-imagen)
