@@ -1,8 +1,5 @@
 #lang racket
 
-;(require "tokenizar.rkt")
-
-
 (define (findN lis n) (cond [(empty? lis) #f]
                             [( = n (first lis)) #t]
                             [else (findN (cdr lis) n)]))
@@ -31,5 +28,5 @@
     (helper iniciales cadena)))
 
 
-    (provide valida)
+(provide valida)
 
