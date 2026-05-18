@@ -58,28 +58,39 @@
   (define-values (__  r2) (expect r1 "colon_op"))
   (define-values (lst r3) (expect r2 "list_op"))
   (define-values (___ r4) (expect-newline r3))
-  (values (list (list 'states (parse-list-lexema (token-lexema lst)))) r4))
+  (let* ([texto-lista    (token-lexema lst)]
+         [nombres-estados (parse-list-lexema texto-lista)]
+         [seccion-states  (list 'states nombres-estados)])
+    (values (list seccion-states) r4)))
 
 (define (parse-alphabet-line tokens)
   (define-values (_   r1) (expect tokens "input_alphabet"))
   (define-values (__  r2) (expect r1 "colon_op"))
   (define-values (lst r3) (expect r2 "list_op"))
   (define-values (___ r4) (expect-newline r3))
-  (values (list (list 'alphabet (parse-list-lexema (token-lexema lst)))) r4))
+  (let* ([texto-lista    (token-lexema lst)]
+         [simbolos-alfabeto (parse-list-lexema texto-lista)]
+         [seccion-alfabeto  (list 'alphabet simbolos-alfabeto)])
+    (values (list seccion-alfabeto) r4))
+)
 
 (define (parse-start-line tokens)
   (define-values (_   r1) (expect tokens "start_state_op"))
   (define-values (__  r2) (expect r1 "colon_op"))
   (define-values (id  r3) (expect-id r2))
   (define-values (___ r4) (expect-newline r3))
-  (values (list (list 'start id)) r4))
+  (let ([seccion-start (list 'start id)])
+    (values (list seccion-start) r4)))
 
 (define (parse-accept-line tokens)
   (define-values (_   r1) (expect tokens "accept_states_op"))
   (define-values (__  r2) (expect r1 "colon_op"))
   (define-values (lst r3) (expect r2 "list_op"))
   (define-values (___ r4) (expect-newline r3))
-  (values (list (list 'accept (parse-list-lexema (token-lexema lst)))) r4))
+  (let* ([texto-lista        (token-lexema lst)]
+         [estados-aceptacion (parse-list-lexema texto-lista)]
+         [seccion-accept     (list 'accept estados-aceptacion)])
+    (values (list seccion-accept) r4)))
 
 (define (parse-transition tokens)
   (define-values (_    r1) (expect    tokens "state_assign_op"))
@@ -89,7 +100,8 @@
   (define-values (___  r5) (expect    r4 "colon_op"))
   (define-values (to   r6) (expect-id r5))
   (define-values (____ r7) (expect-newline r6))
-  (values (list (list 'transition from sym to)) r7))
+  (let ([seccion-transicion (list 'transition from sym to)])
+    (values (list seccion-transicion) r7)))
 
 ; Parsea cero o mas transiciones mientras el siguiente token sea "-"
 (define (parse-transitions tokens)
