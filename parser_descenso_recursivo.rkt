@@ -7,7 +7,7 @@
 
 (define (skip-newlines tokens)
   (cond [(null? tokens) '()]
-        [(equal? (token-label (first tokens)) "newline") (skip-newlines (rest tokens))]
+        [(equal? (token-label (first tokens)) "newline") (skip-newlines ( tokens))]
         [else tokens]))
 
 (define (is-id? t)
