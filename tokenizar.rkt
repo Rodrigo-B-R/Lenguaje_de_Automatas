@@ -48,10 +48,10 @@
     (list "state_assign_op"  #rx"^-")
     (list "colon_op"         #rx"^:")
     (list "comma_op"         #rx"^,")
-    (list "list_op"          #px"^\\[\\s*[a-zA-Z][a-zA-Z0-9]*(\\s*,\\s*[a-zA-Z][a-zA-Z0-9]*)*\\s*\\]")
+    ;(list "list_op"          #px"^\\[\\s*[a-zA-Z][a-zA-Z0-9]*(\\s*,\\s*[a-zA-Z][a-zA-Z0-9]*)*\\s*\\]")
     (list "string"           #rx"^\"[^\"]*\"")
     (list "ASCII"            #rx"^[a-zA-Z]+")
-    (list "Id"               #rx"^[a-zA-Z][a-zA-Z0-9]*")
+    (list "ID"               #rx"^[a-zA-Z][a-zA-Z0-9]*")
   ))
 
 
@@ -106,7 +106,7 @@
    "  .list_op         { color:#4ec9b0; }\n"
    "  .string          { color:#ce9178; }\n"
    "  .ASCII           { color:#dcdcaa; }\n"
-   "  .Id              { color:#9cdcfe; }\n"
+   "  .ID              { color:#9cdcfe; }\n"
    "  .error              { color: red; }\n"
 
    "</style>\n</head>\n<body>\n\t"
