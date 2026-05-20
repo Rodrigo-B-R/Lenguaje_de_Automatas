@@ -50,7 +50,6 @@
     (list "comma_op"         #rx"^,")
     ;(list "list_op"          #px"^\\[\\s*[a-zA-Z][a-zA-Z0-9]*(\\s*,\\s*[a-zA-Z][a-zA-Z0-9]*)*\\s*\\]")
     (list "string"           #rx"^\"[^\"]*\"")
-    (list "ASCII"            #rx"^[a-zA-Z]+")
     (list "ID"               #rx"^[a-zA-Z][a-zA-Z0-9]*")
   ))
 
@@ -72,10 +71,13 @@
                  (cons (list (first best) (third best)) tokens))) ])))
 
 (define (tokenize-all lines)
-  (apply append
-         (map (lambda (line)
-                (append (tokenize-line line) '(("newline" "<br>"))))
-              lines)))
+  (define (tokenize-line-add-newline line)
+    (append (tokenize-line line) '(("newline" "<br>"))))
+
+  (define all-tokens
+    (apply append (map tokenize-line-add-newline lines)))
+
+  (append all-tokens '(("EOF" "EOF"))))
 
 
 

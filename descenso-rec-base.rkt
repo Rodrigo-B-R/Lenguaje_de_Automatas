@@ -9,6 +9,9 @@
 (define TOKEN-KW-STATE      "states")
 (define TOKEN-ALPHABET      "input_alphabet")
 (define TOKEN-COMMENT       "comment_op")
+(define TOKEN-DELTA "delta_op")
+(define TOKEN-EOF "EOF")
+
 
 
 (define (add-error errors esperado tok)
@@ -64,6 +67,9 @@
        (cond
          [(equal? ntok TOKEN-ID)
           (syn-statesPrime (cddr toks) errors)]
+        ;  [(equal? ntok TOKEN-NEWLINE)
+        ;   ; coma colgante: consumir coma + newline para no propagar el error
+        ;   (resultado (cddr toks) (add-error errors TOKEN-ID ntok))]
          [else
           (resultado toks (add-error errors TOKEN-ID ntok))]))]
     [(equal? ctok TOKEN-NEWLINE)
@@ -131,6 +137,7 @@
     [else
      (resultado toks* (add-error (res-errors r0) TOKEN-ACCEPT-STATES ctok))]))
 
+;alphabet : 
 (define (syn-alphabet toks errors)
   (define r0    (syn-comment toks errors))
   (define toks* (res-toks r0))
@@ -148,12 +155,10 @@
 
 ; states  ::= stateId  statesPrime
 (define (syn-states toks errors)
-  (define r0    (syn-comment toks errors))
-  (define toks* (res-toks r0))
-  (define ctok  (caar toks*))
+  (define ctok (caar toks))
   (cond
-    [(equal? ctok TOKEN-ID) (syn-statesPrime (cdr toks*) (res-errors r0))]
-    [else (resultado toks* (add-error (res-errors r0) TOKEN-ID ctok))]))
+    [(equal? ctok TOKEN-ID) (syn-statesPrime (cdr toks) errors)]
+    [else (resultado toks (add-error errors TOKEN-ID ctok))]))
 
 
 ;states:
@@ -170,6 +175,91 @@
          [else (resultado toks* (add-error (res-errors r0) TOKEN-COLON ntok))]))]
     [else (resultado toks* (add-error (res-errors r0) TOKEN-KW-STATE ctok))]))
 
+; delta: newline
+(define (syn-delta toks errors)
+  (define r0    (syn-comment toks errors))
+  (define toks* (res-toks r0))
+  (define ctok  (caar toks*))
+  (cond
+    [(equal? ctok TOKEN-DELTA)
+     (let ([ntok (caadr toks*)])
+       (cond
+         [(equal? ntok TOKEN-COLON)
+          (let ([ntok2 (caaddr toks*)])
+            (cond
+              [(equal? ntok2 TOKEN-NEWLINE)
+               (syn-deltafirst (cdddr toks*) (res-errors r0))]
+              [(equal? ntok2 TOKEN-COMMENT)
+               (let ([r (syn-comment (cddr toks*) (res-errors r0))])
+                 (syn-deltafirst (res-toks r) (res-errors r)))]
+              [else
+               (resultado toks* (add-error (res-errors r0) TOKEN-NEWLINE ntok2))]))]
+         [else
+          (resultado toks* (add-error (res-errors r0) TOKEN-COLON ntok))]))]
+    [else
+     (resultado toks* (add-error (res-errors r0) TOKEN-DELTA ctok))]))
+
+; id colon id colon id (comment?) newline syn-deltaPrime
+(define (syn-deltafirst toks errors)
+  (define r0    (syn-comment toks errors))
+  (define toks* (res-toks r0))
+  (define ctok  (caar toks*))
+  (cond
+    [(equal? ctok TOKEN-ID)
+     (let ([t2 (caadr    toks*)]
+           [t3 (caaddr   toks*)]
+           [t4 (caar (cdddr  toks*))]
+           [t5 (caar (cddddr toks*))])
+       (cond
+         [(not (equal? t2 TOKEN-COLON)) (resultado toks* (add-error (res-errors r0) TOKEN-COLON t2))]
+         [(not (equal? t3 TOKEN-ID))    (resultado toks* (add-error (res-errors r0) TOKEN-ID    t3))]
+         [(not (equal? t4 TOKEN-COLON)) (resultado toks* (add-error (res-errors r0) TOKEN-COLON t4))]
+         [(not (equal? t5 TOKEN-ID))    (resultado toks* (add-error (res-errors r0) TOKEN-ID    t5))]
+         [else
+          (let* ([after5 (cdr (cddddr toks*))]
+                 [next   (caar after5)])
+            (cond
+              [(equal? next TOKEN-NEWLINE)
+               (syn-deltaPrime (cdr after5) (res-errors r0))]
+              [(equal? next TOKEN-COMMENT)
+               (let ([r (syn-comment after5 (res-errors r0))])
+                 (syn-deltaPrime (res-toks r) (res-errors r)))]
+              [else
+               (resultado after5 (add-error (res-errors r0) TOKEN-NEWLINE next))]))]))]
+    [else
+     (resultado toks* (add-error (res-errors r0) TOKEN-ID ctok))]))
+; syn-deltaPrime ::= id colon id colon id (comment?) newline syn-deltaPrime | epsilon
+(define (syn-deltaPrime toks errors)
+  (define ctok (caar toks))
+  (cond
+    [(not (equal? ctok TOKEN-ID))
+     (resultado toks errors)]  ; epsilon: no hay mas transiciones
+    [else
+     (let ([t2 (caadr    toks)]
+           [t3 (caaddr   toks)]
+           [t4 (caar (cdddr  toks))]
+           [t5 (caar (cddddr toks))])
+       (cond
+         [(not (equal? t2 TOKEN-COLON)) (resultado toks (add-error errors TOKEN-COLON t2))]
+         [(not (equal? t3 TOKEN-ID))    (resultado toks (add-error errors TOKEN-ID    t3))]
+         [(not (equal? t4 TOKEN-COLON)) (resultado toks (add-error errors TOKEN-COLON t4))]
+         [(not (equal? t5 TOKEN-ID))    (resultado toks (add-error errors TOKEN-ID    t5))]
+         [else
+          (let* ([after5 (cdr (cddddr toks))]
+                 [next   (caar after5)])
+            (cond
+              [(equal? next TOKEN-NEWLINE)
+               (syn-deltaPrime (cdr after5) errors)]
+              [(equal? next TOKEN-COMMENT)
+               (let ([r (syn-comment after5 errors)])
+                 (syn-deltaPrime (res-toks r) (res-errors r)))]
+              [else
+               (resultado after5 (add-error errors TOKEN-NEWLINE next))]))]))]))
+
+
+  
+
+
 
 
 ; inicio del descenso
@@ -179,36 +269,15 @@
   (define r2 (syn-stateStart     (res-toks r1) (res-errors r1)))
   (define r3 (syn-statesAccepted (res-toks r2) (res-errors r2)))
   (define r4 (syn-alphabet       (res-toks r3) (res-errors r3)))
-  (displayln (res-errors r4)))
+  (define r5 (syn-delta          (res-toks r4) (res-errors r4)))
 
-(define token-stream '( ("states"           "states")
-   ("colon_op"         ":")
-   ("ID"               "q0")
-   ("comma_op"         ",")
-   ("ID"               "q1")
-   ("comment_op"       "#")
-   ("ID"               "estados")
-   ("newline"          "\n")
-   ("start_state_op"   "start_state")
-   ("colon_op"         ":")
-   ("ID"               "q0")
-   ("comment_op"       "#")
-   ("ID"               "inicio")
-   ("newline"          "\n")
-   ("accept_states_op" "accept_states")
-   ("colon_op"         ":")
-   ("ID"               "q1")
-   ("comment_op"       "#")
-   ("ID"               "acepta")
-   ("newline"          "\n")
-   ("input_alphabet"   "input_alphabet")
-   ("colon_op"         ":")
-   ("ID"               "a")
-   ("comment_op"       "#")
-   ("ID"               "simbolo")
-   ("newline"          "\n") )
+  (define tok-final
+    (if (null? (res-toks r5))
+        TOKEN-EOF
+        (caar (res-toks r5))))
 
+  (if (equal? tok-final TOKEN-EOF)
+      (res-errors r5)
+      (add-error (res-errors r5) TOKEN-EOF tok-final)))
 
-)
-
-(rec-des token-stream)
+(provide rec-des)
