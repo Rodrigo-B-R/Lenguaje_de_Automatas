@@ -153,6 +153,7 @@
     [else
      (resultado toks* (add-error (res-errors r0) TOKEN-ALPHABET ctok))]))
 
+;stateId: stateIdPrime
 ; states  ::= stateId  statesPrime
 (define (syn-states toks errors)
   (define ctok (caar toks))
@@ -228,6 +229,8 @@
                (resultado after5 (add-error (res-errors r0) TOKEN-NEWLINE next))]))]))]
     [else
      (resultado toks* (add-error (res-errors r0) TOKEN-ID ctok))]))
+
+
 ; syn-deltaPrime ::= id colon id colon id (comment?) newline syn-deltaPrime | epsilon
 (define (syn-deltaPrime toks errors)
   (define ctok (caar toks))
