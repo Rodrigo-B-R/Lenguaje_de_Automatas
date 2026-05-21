@@ -37,7 +37,8 @@
    (list "comma_op" #rx"^,")
    ;(list "list_op"          #px"^\\[\\s*[a-zA-Z][a-zA-Z0-9]*(\\s*,\\s*[a-zA-Z][a-zA-Z0-9]*)*\\s*\\]")
    (list "string" #rx"^\"[^\"]*\"")
-   (list "ID" #rx"^[a-zA-Z][a-zA-Z0-9]*")))
+   (list "state"  #rx"^q[0-9]+")
+   (list "ID"     #rx"^[a-zA-Z0-9]")))
 
 (define (tokenize-line str)
   (let loop ([remaining (string-trim str)]
@@ -98,7 +99,14 @@
 (define (error-tokens? token-stream)
   (findf (lambda (token) (equal? (first token) "error")) token-stream))
 
+;limpiar token stream
+(define (clean-token-stream token-stream)
+ (token-stream))
+
+
 (provide tokenize-line
          tokenize-all
          tokens->html
-         error-tokens?)
+         error-tokens?
+         clean-token-stream)
+

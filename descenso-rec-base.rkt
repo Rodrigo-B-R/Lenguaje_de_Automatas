@@ -11,6 +11,8 @@
 (define TOKEN-COMMENT       "comment_op")
 (define TOKEN-DELTA         "delta_op")
 (define TOKEN-EOF           "EOF")
+(define TOKEN-STATE "state")
+
 
 
 (define (add-error errors esperado tok)
@@ -42,8 +44,9 @@
 (define (collect-ids toks)
   (cond
     [(null? toks) '()]
-    [(equal? (caar toks) TOKEN-ID)   (cons (cadar toks) (collect-ids (cdr toks)))]
-    [(equal? (caar toks) TOKEN-COMA) (collect-ids (cdr toks))]
+    [(or (equal? (caar toks) TOKEN-ID)
+         (equal? (caar toks) TOKEN-STATE)) (cons (cadar toks) (collect-ids (cdr toks)))]
+    [(equal? (caar toks) TOKEN-COMA)       (collect-ids (cdr toks))]
     [else '()]))
 
 
@@ -66,10 +69,10 @@
     [(equal? ctok TOKEN-COMA)
      (let ([ntok (caadr toks)])
        (cond
-         [(equal? ntok TOKEN-ID)
+         [(equal? ntok TOKEN-STATE)
           (syn-statesPrime (cddr toks) errors automata)]
          [else
-          (resultado toks (add-error errors TOKEN-ID ntok) automata)]))]
+          (resultado toks (add-error errors TOKEN-STATE ntok) automata)]))]
     [(equal? ctok TOKEN-NEWLINE)
      (resultado (cdr toks) errors automata)]
     [(equal? ctok TOKEN-COMMENT)
@@ -84,7 +87,7 @@
   (define toks* (res-toks r0))
   (define ctok  (caar toks*))
   (cond
-    [(equal? ctok TOKEN-ID)
+    [(equal? ctok TOKEN-STATE)
      (let ([ntok (caadr toks*)])
        (cond
          [(equal? ntok TOKEN-NEWLINE)
@@ -95,7 +98,7 @@
          [else
           (resultado toks* (add-error (res-errors r0) TOKEN-NEWLINE ntok) (res-automata r0))]))]
     [else
-     (resultado toks* (add-error (res-errors r0) TOKEN-ID ctok) (res-automata r0))]))
+     (resultado toks* (add-error (res-errors r0) TOKEN-STATE ctok) (res-automata r0))]))
 
 
 (define (syn-stateStart toks errors automata)
@@ -109,7 +112,7 @@
          [(equal? ntok TOKEN-COLON)
           (let* ([state-toks (cddr toks*)]
                  [start-id   (and (not (null? state-toks))
-                                  (equal? (caar state-toks) TOKEN-ID)
+                                  (equal? (caar state-toks) TOKEN-STATE)
                                   (cadar state-toks))]
                  [automata*  (if start-id
                                  (add-automata (res-automata r0) start-id 'inicial #f)
@@ -154,7 +157,7 @@
           (let* ([alpha-toks (cddr toks*)]
                  [symbols    (collect-ids alpha-toks)]
                  [automata*  (hash-set (res-automata r0) "alphabet" symbols)])
-            (syn-states alpha-toks (res-errors r0) automata*))]
+            (syn-symbols alpha-toks (res-errors r0) automata*))]
          [else
           (resultado toks* (add-error (res-errors r0) TOKEN-COLON ntok) (res-automata r0))]))]
     [else
@@ -164,7 +167,32 @@
 (define (syn-states toks errors automata)
   (define ctok (caar toks))
   (cond
-    [(equal? ctok TOKEN-ID) (syn-statesPrime (cdr toks) errors automata)]
+    [(equal? ctok TOKEN-STATE) (syn-statesPrime (cdr toks) errors automata)]
+    [else (resultado toks (add-error errors TOKEN-STATE ctok) automata)]))
+
+; Lista de simbolos del alfabeto: TOKEN-ID , TOKEN-ID ...
+(define (syn-symbolsPrime toks errors automata)
+  (define ctok (caar toks))
+  (cond
+    [(equal? ctok TOKEN-COMA)
+     (let ([ntok (caadr toks)])
+       (cond
+         [(equal? ntok TOKEN-ID)
+          (syn-symbolsPrime (cddr toks) errors automata)]
+         [else
+          (resultado toks (add-error errors TOKEN-ID ntok) automata)]))]
+    [(equal? ctok TOKEN-NEWLINE)
+     (resultado (cdr toks) errors automata)]
+    [(equal? ctok TOKEN-COMMENT)
+     (let ([r (syn-commentPrime (cdr toks) errors automata)])
+       (resultado (res-toks r) (res-errors r) (res-automata r)))]
+    [else
+     (resultado toks (add-error errors TOKEN-COMA ctok) automata)]))
+
+(define (syn-symbols toks errors automata)
+  (define ctok (caar toks))
+  (cond
+    [(equal? ctok TOKEN-ID) (syn-symbolsPrime (cdr toks) errors automata)]
     [else (resultado toks (add-error errors TOKEN-ID ctok) automata)]))
 
 
@@ -211,13 +239,14 @@
      (resultado toks* (add-error (res-errors r0) TOKEN-DELTA ctok) (res-automata r0))]))
 
 
+; id colon id colon id newline
 ; from: sym: to
 (define (syn-deltafirst toks errors automata)
   (define r0    (syn-comment toks errors automata))
   (define toks* (res-toks r0))
   (define ctok  (caar toks*))
   (cond
-    [(equal? ctok TOKEN-ID)
+    [(equal? ctok TOKEN-STATE)
      (let ([t2 (caadr           toks*)]
            [t3 (caaddr          toks*)]
            [t4 (caar (cdddr     toks*))]
@@ -226,7 +255,7 @@
          [(not (equal? t2 TOKEN-COLON)) (resultado toks* (add-error (res-errors r0) TOKEN-COLON t2) (res-automata r0))]
          [(not (equal? t3 TOKEN-ID))    (resultado toks* (add-error (res-errors r0) TOKEN-ID    t3) (res-automata r0))]
          [(not (equal? t4 TOKEN-COLON)) (resultado toks* (add-error (res-errors r0) TOKEN-COLON t4) (res-automata r0))]
-         [(not (equal? t5 TOKEN-ID))    (resultado toks* (add-error (res-errors r0) TOKEN-ID    t5) (res-automata r0))]
+         [(not (equal? t5 TOKEN-STATE)) (resultado toks* (add-error (res-errors r0) TOKEN-STATE t5) (res-automata r0))]
          [else
           (let* ([from      (cadar          toks*)]
                  [sym       (cadar (cddr    toks*))]
@@ -243,13 +272,13 @@
               [else
                (resultado after5 (add-error (res-errors r0) TOKEN-NEWLINE next) automata*)]))]))]
     [else
-     (resultado toks* (add-error (res-errors r0) TOKEN-ID ctok) (res-automata r0))]))
+     (resultado toks* (add-error (res-errors r0) TOKEN-STATE ctok) (res-automata r0))]))
 
 
 (define (syn-deltaPrime toks errors automata)
   (define ctok (caar toks))
   (cond
-    [(not (equal? ctok TOKEN-ID))
+    [(not (equal? ctok TOKEN-STATE))
      (resultado toks errors automata)]  ; epsilon: no hay mas transiciones
     [else
      (let ([t2 (caadr        toks)]
@@ -257,10 +286,10 @@
            [t4 (caar (cdddr  toks))]
            [t5 (caar (cddddr toks))])
        (cond
-         [(not (equal? t2 TOKEN-COLON)) (resultado toks (add-error errors TOKEN-COLON t2) automata)]
-         [(not (equal? t3 TOKEN-ID))    (resultado toks (add-error errors TOKEN-ID    t3) automata)]
-         [(not (equal? t4 TOKEN-COLON)) (resultado toks (add-error errors TOKEN-COLON t4) automata)]
-         [(not (equal? t5 TOKEN-ID))    (resultado toks (add-error errors TOKEN-ID    t5) automata)]
+         [(not (equal? t2 TOKEN-COLON))  (resultado toks (add-error errors TOKEN-COLON  t2) automata)]
+         [(not (equal? t3 TOKEN-ID))     (resultado toks (add-error errors TOKEN-ID     t3) automata)]
+         [(not (equal? t4 TOKEN-COLON))  (resultado toks (add-error errors TOKEN-COLON  t4) automata)]
+         [(not (equal? t5 TOKEN-STATE))  (resultado toks (add-error errors TOKEN-STATE  t5) automata)]
          [else
           (let* ([from      (cadar         toks)]
                  [sym       (cadar (cddr   toks))]
