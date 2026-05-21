@@ -67,9 +67,6 @@
        (cond
          [(equal? ntok TOKEN-ID)
           (syn-statesPrime (cddr toks) errors)]
-        ;  [(equal? ntok TOKEN-NEWLINE)
-        ;   ; coma colgante: consumir coma + newline para no propagar el error
-        ;   (resultado (cddr toks) (add-error errors TOKEN-ID ntok))]
          [else
           (resultado toks (add-error errors TOKEN-ID ntok))]))]
     [(equal? ctok TOKEN-NEWLINE)
