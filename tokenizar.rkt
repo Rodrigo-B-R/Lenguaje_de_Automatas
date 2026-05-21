@@ -26,7 +26,7 @@
 
 (define allRegex
   (list
-   (list "comment_op" #rx"^#.*")
+   (list "comment_op" #rx"^#[^\n]*")
    (list "input_alphabet" #rx"^input_alphabet")
    (list "states" #rx"^states")
    (list "delta_op" #rx"^delta")
@@ -35,13 +35,16 @@
    (list "state_assign_op" #rx"^-")
    (list "colon_op" #rx"^:")
    (list "comma_op" #rx"^,")
-   ;(list "list_op"          #px"^\\[\\s*[a-zA-Z][a-zA-Z0-9]*(\\s*,\\s*[a-zA-Z][a-zA-Z0-9]*)*\\s*\\]")
+   (list "newline" #rx"^\n")
    (list "string" #rx"^\"[^\"]*\"")
    (list "state"  #rx"^q[0-9]+")
    (list "ID"     #rx"^[a-zA-Z0-9]")))
 
+(define (trim-spaces str)
+  (string-trim str #px"[ \t\r]+"))
+
 (define (tokenize-line str)
-  (let loop ([remaining (string-trim str)]
+  (let loop ([remaining (trim-spaces str)]
              [tokens '()])
     (cond
       [(string=? remaining "") (reverse tokens)]
@@ -49,29 +52,21 @@
        (define allMatches (map (lambda (r) (getMatch r remaining)) allRegex))
        (define best (getMaximo allMatches))
        (if (= (second best) 0)
-
-           ;no hubo match
            (loop (substring remaining 1) (cons (list "error" (substring remaining 0 1)) tokens))
-
-           ;si hubo match
-           (loop (string-trim (substring remaining (second best)))
+           (loop (trim-spaces (substring remaining (second best)))
                  (cons (list (first best) (third best)) tokens)))])))
 
-(define (tokenize-all lines)
-  (define (tokenize-line-add-newline line)
-    (append (tokenize-line line) '(("newline" "<br>"))))
-
-  (define all-tokens (apply append (map tokenize-line-add-newline lines)))
-
-  (append all-tokens '(("EOF" "EOF"))))
+(define (tokenize-all input)
+  (append (tokenize-line input) '(("EOF" "EOF"))))
 
 ;funcion para formatizar tokens en html
 (define (styler token)
   (define label (first token))
   (define lexema (second token))
-  (if (equal? label "newline")
-      "<br>\n"
-      (string-append "<text class='" label "'>" lexema "</text> ")))
+  (cond
+    [(equal? label "newline") "<br>\n"]
+    [(equal? label "EOF")     ""]
+    [else (string-append "<text class='" label "'>" lexema "</text> ")]))
 
 (define (tokens->html token-stream)
   (define body (apply string-append (map styler token-stream)))
@@ -81,7 +76,7 @@
    "  .comment_op      { color:#6a9955; font-style:italic; }\n"
    "  .input_alphabet  { color:#c586c0; font-weight:bold; }\n"
    "  .states          { color:#569cd6; font-weight:bold; }\n"
-   "  .delta_op        { color:#569cd6; font-weight:bold; }\n"
+   "  .delta_op        { color:#c586c0; font-weight:bold; }\n"
    "  .start_state_op  { color:#569cd6; font-weight:bold; }\n"
    "  .accept_states_op{ color:#569cd6; font-weight:bold; }\n"
    "  .state_assign_op { color:#d4d4d4; }\n"
@@ -99,9 +94,10 @@
 (define (error-tokens? token-stream)
   (findf (lambda (token) (equal? (first token) "error")) token-stream))
 
-;limpiar token stream
 (define (clean-token-stream token-stream)
- (token-stream))
+  (filter (lambda (tok)
+            (not (member (first tok) '("comment_op" "newline"))))
+          token-stream))
 
 
 (provide tokenize-line
