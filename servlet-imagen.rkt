@@ -16,8 +16,7 @@
 
 ; Tokeniza y parsea el input. Devuelve (values html-resultado ok? automata-o-#f)
 (define (process-input input)
-  (define lines  (string-split input "\n"))
-  (define tokens (tokenize-all lines))
+  (define tokens (tokenize-all input))
   (define lex-error (error-tokens? tokens))
   (cond
     [lex-error
@@ -27,7 +26,7 @@
               [mensaje-error (list (list "error" (string-append " <- Error lexico: '" lexema-error "'")))])
          (values (tokens->html (append antes (list token-error) mensaje-error)) #f #f)))]
     [else
-     (define parse-result  (rec-des tokens))
+     (define parse-result  (rec-des (clean-token-stream tokens)))
      (define parse-errors  (first  parse-result))
      (define automata      (second parse-result))
      (if (null? parse-errors)
