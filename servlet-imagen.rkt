@@ -5,6 +5,7 @@
 (require json)
 (require "tokenizar.rkt")
 (require "descenso-rec-base.rkt")
+(require "draw-graph-modulo.rkt")
 
 (define (errors->html errors)
   (string-append
@@ -13,7 +14,7 @@
           (map (lambda (e) (string-append "<p style='color:#f44747'>" e "</p>")) errors))
    "</body></html>"))
 
-; Tokeniza y parsea el input. Devuelve (values html-resultado ok?)
+; Tokeniza y parsea el input. Devuelve (values html-resultado ok? automata-o-#f)
 (define (process-input input)
   (define lines  (string-split input "\n"))
   (define tokens (tokenize-all lines))
@@ -24,12 +25,14 @@
        (let* ([token-error   (first resto)]
               [lexema-error  (second token-error)]
               [mensaje-error (list (list "error" (string-append " <- Error lexico: '" lexema-error "'")))])
-         (values (tokens->html (append antes (list token-error) mensaje-error)) #f)))]
+         (values (tokens->html (append antes (list token-error) mensaje-error)) #f #f)))]
     [else
-     (define parse-errors (rec-des tokens))
+     (define parse-result  (rec-des tokens))
+     (define parse-errors  (first  parse-result))
+     (define automata      (second parse-result))
      (if (null? parse-errors)
-         (values (tokens->html tokens) #t)
-         (values (errors->html parse-errors) #f))]))
+         (values (tokens->html tokens) #t automata)
+         (values (errors->html parse-errors) #f #f))]))
 
 (define (start request)
   (define method (request-method request))
@@ -38,9 +41,9 @@
      (let* ([data      (bytes->jsexpr (request-post-data/raw request))]
             [input-str (hash-ref data 'input)]
             [_cadena   (hash-ref data 'cadena "")])
-       (let-values ([(resultado _ok?) (process-input input-str)])
+       (let-values ([(resultado ok? automata) (process-input input-str)])
          (let ([json-hash (hash 'resultado resultado
-                                'imagen    ""
+                                'imagen    (if ok? (genera-imagen automata) "")
                                 'valido    'null)])
            (response/output #:code 200 #:mime-type #"application/json"
                             (lambda (out) (write-json json-hash out))))))]

@@ -35,24 +35,22 @@
 
 ; automata hash -> string en formato .dot
 (define (genera-dot automata)
-  (define start  (hash-ref automata "iniciales" "?"))
-  (define finals (hash-ref automata "finales"   '()))
-  (define states (hash-ref automata "states"    '()))
-  (string-append
-   "digraph DFA {\n"
-   "  rankdir=LR;\n"
-   (format "  start -> ~a [label=\"\"];\n" start)
-   (transition-lines automata states)
-   "  start [shape=plaintext];\n"
-   (shape-lines states finals)
-   "}\n"))
+  (define start (hash-ref automata "iniciales" "?"))
+  (define finals (hash-ref automata "finales" '()))
+  (define states (hash-ref automata "states" '()))
+  (string-append "digraph DFA {\n"
+                 "  rankdir=LR;\n"
+                 (format "  start -> ~a [label=\"\"];\n" start)
+                 (transition-lines automata states)
+                 "  start [shape=plaintext];\n"
+                 (shape-lines states finals)
+                 "}\n"))
 
 ; automata hash -> string base64 del PNG generado
 (define (genera-imagen automata)
   (define dot-text (genera-dot automata))
   (parameterize ([current-directory here])
-    (call-with-output-file "dfa.dot" #:exists 'replace
-                           (lambda (out) (display dot-text out)))
+    (call-with-output-file "dfa.dot" #:exists 'replace (lambda (out) (display dot-text out)))
     (system "dot -Tpng dfa.dot -o dfa.png")
     (displayln "dfa.png generated")
     (bytes->string/latin-1 (base64-encode (file->bytes "dfa.png")))))
