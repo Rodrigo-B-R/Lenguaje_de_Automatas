@@ -6,6 +6,7 @@
 (require "tokenizar.rkt")
 (require "descenso-rec-base.rkt")
 (require "draw-graph-modulo.rkt")
+(require "automaton-simulation.rkt")
 
 (define (errors->html errors)
   (string-append
@@ -43,7 +44,7 @@
        (let-values ([(resultado ok? automata) (process-input input-str)])
          (let ([json-hash (hash 'resultado resultado
                                 'imagen    (if ok? (genera-imagen automata) "")
-                                'valido    'null)])
+                                'valido    (valida automata _cadena))])
            (response/output #:code 200 #:mime-type #"application/json"
                             (lambda (out) (write-json json-hash out))))))]
     [else
