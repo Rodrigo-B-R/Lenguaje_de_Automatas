@@ -8,21 +8,23 @@
 (current-directory here)
 (displayln (format "DIR: ~a" (current-directory)))
 
+(define (transitions->dot state delta-map sym)
+  (format "  ~a -> ~a [label=\"~a\"];\n" state (hash-ref delta-map sym) (symbol->string sym)))
+
+(define (get-state-transitions state automata)
+  (if (hash-has-key? automata state)
+      (let* ([delta-map (hash-ref automata state)]
+             [transitions (hash-keys delta-map)])
+        (apply string-append
+               (map (lambda (sym) (transitions->dot state delta-map sym)) transitions)))
+      ""))
+
 ; Genera las lineas de transicion: q0 -> q1 [label="a"];
 (define (transition-lines automata states)
   (apply string-append
          (map (lambda (state)
-                (if (hash-has-key? automata state)
-                    (let ([delta-map (hash-ref automata state)])
-                      (apply string-append
-                             (map (lambda (sym)
-                                    (format "  ~a -> ~a [label=\"~a\"];\n"
-                                            state
-                                            (hash-ref delta-map sym)
-                                            (symbol->string sym)))
-                                  (hash-keys delta-map))))
-                    ""))
-              states)))
+                (get-state-transitions state automata))
+                states)))
 
 ; Genera las declaraciones de forma de cada estado
 (define (shape-lines states finals)
