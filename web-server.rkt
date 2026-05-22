@@ -1,4 +1,4 @@
-#lang racket
+﻿#lang racket
 
 (require web-server/servlet)
 (require web-server/servlet-env)
@@ -44,7 +44,7 @@
        (let-values ([(resultado ok? automata) (process-input input-str)])
          (let ([json-hash (hash 'resultado resultado
                                 'imagen    (if ok? (genera-imagen automata) "")
-                                'valido    (valida automata _cadena))])
+                                'valido    (and ok? (valida automata _cadena)))])
            (response/output #:code 200 #:mime-type #"application/json"
                             (lambda (out) (write-json json-hash out))))))]
     [else
