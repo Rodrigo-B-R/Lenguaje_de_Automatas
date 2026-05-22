@@ -24,7 +24,8 @@
      (let-values ([(antes resto) (splitf-at tokens (lambda (t) (not (equal? (first t) "error"))))])
        (let* ([token-error   (first resto)]
               [lexema-error  (second token-error)]
-              [mensaje-error (list (list "error" (string-append " <- Error lexico: '" lexema-error "'")))])
+              [linea-error   (if (>= (length token-error) 3) (number->string (third token-error)) "?")]
+              [mensaje-error (list (list "error" (string-append " <- Error lexico: '" lexema-error "' en linea " linea-error)))])
          (values (tokens->html (append antes (list token-error) mensaje-error)) #f #f)))]
     [else
      (define parse-result  (rec-des (clean-token-stream tokens)))

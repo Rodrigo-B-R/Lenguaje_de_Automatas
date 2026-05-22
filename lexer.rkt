@@ -3,6 +3,20 @@
 ;funciones para obtener tokens
 
 (define reMatch regexp-match-positions)
+(define TOKEN-COMA          "comma_op")
+(define TOKEN-ID            "ID")
+(define TOKEN-COLON         "colon_op")
+(define TOKEN-START-STATE   "start_state_op")
+(define TOKEN-ACCEPT-STATES "accept_states_op")
+(define TOKEN-KW-STATE      "states")
+(define TOKEN-ALPHABET      "input_alphabet")
+(define TOKEN-DELTA         "delta_op")
+(define TOKEN-EOF           "EOF")
+(define TOKEN-STATE         "state")
+(define TOKEN-NEWLINE "newline")
+(define TOKEN-COMMENT "comment_op")
+(define TOKEN-ERROR "error")
+
 
 (define (getMatch label-regex str)
   (define label (first label-regex))
@@ -26,46 +40,56 @@
 
 (define allRegex
   (list
-   (list "comment_op" #rx"^#[^\n]*")
-   (list "input_alphabet" #rx"^input_alphabet")
-   (list "states" #rx"^states")
-   (list "delta_op" #rx"^delta")
-   (list "start_state_op" #rx"^start_state")
-   (list "accept_states_op" #rx"^accept_states")
-   (list "state_assign_op" #rx"^-")
-   (list "colon_op" #rx"^:")
-   (list "comma_op" #rx"^,")
-   (list "newline" #rx"^\n")
-   (list "string" #rx"^\"[^\"]*\"")
-   (list "state"  #rx"^q[0-9]+")
-   (list "ID"     #rx"^[a-zA-Z0-9]")))
+   (list TOKEN-COMMENT #rx"^#[^\n]*")
+   (list TOKEN-ALPHABET #rx"^input_alphabet")
+   (list TOKEN-KW-STATE #rx"^states")
+   (list TOKEN-DELTA #rx"^delta")
+   (list TOKEN-START-STATE #rx"^start_state")
+   (list TOKEN-ACCEPT-STATES #rx"^accept_states")
+   (list TOKEN-COLON #rx"^:")
+   (list TOKEN-COMA #rx"^,")
+   (list TOKEN-NEWLINE #rx"^\n")
+   (list TOKEN-STATE #rx"^q[0-9]+")
+   (list TOKEN-ID    #rx"^[a-zA-Z0-9]")))
 
 (define (trim-spaces str)
   (string-trim str #px"[ \t\r]+"))
 
 (define (tokenize-line str)
   (let loop ([remaining (trim-spaces str)]
-             [tokens '()])
+             [tokens '()]
+             [num-linea 1])
     (cond
       [(string=? remaining "") (reverse tokens)]
       [else
        (define allMatches (map (lambda (r) (getMatch r remaining)) allRegex))
        (define best (getMaximo allMatches))
        (if (= (second best) 0)
-           (loop (substring remaining 1) (cons (list "error" (substring remaining 0 1)) tokens))
-           (loop (trim-spaces (substring remaining (second best)))
-                 (cons (list (first best) (third best)) tokens)))])))
+           (loop (substring remaining 1) (cons (list TOKEN-ERROR (substring remaining 0 1) num-linea) tokens) num-linea)
+
+           (let ([nueva-linea (if (equal? (first best) TOKEN-NEWLINE)
+                                  (+ num-linea 1)
+                                  num-linea)])
+             (loop (trim-spaces (substring remaining (second best)))
+                   (cons (list (first best) (third best) num-linea) tokens)
+                   nueva-linea)))])))
 
 (define (tokenize-all input)
-  (append (tokenize-line input) '(("EOF" "EOF"))))
+  (define tokens (tokenize-line input))
+  (define eof-line
+    (if (null? tokens)
+        1
+        (let ([ultimo (last tokens)])
+          (if (>= (length ultimo) 3) (third ultimo) 1))))
+  (append tokens (list (list TOKEN-EOF TOKEN-EOF eof-line))))
 
 ;funcion para formatizar tokens en html
 (define (styler token)
   (define label (first token))
   (define lexema (second token))
   (cond
-    [(equal? label "newline") "<br>\n"]
-    [(equal? label "EOF")     ""]
+    [(equal? label TOKEN-NEWLINE) "<br>\n"]
+    [(equal? label TOKEN-EOF)     ""]
     [else (string-append "<text class='" label "'>" lexema "</text> ")]))
 
 (define (tokens->html token-stream)
@@ -92,11 +116,11 @@
    "\n</body>\n</html>"))
 
 (define (error-tokens? token-stream)
-  (findf (lambda (token) (equal? (first token) "error")) token-stream))
+  (findf (lambda (token) (equal? (first token) TOKEN-ERROR)) token-stream))
 
 (define (clean-token-stream token-stream)
   (filter (lambda (tok)
-            (not (member (first tok) '("comment_op" "newline"))))
+            (not (member (first tok) (list TOKEN-COMMENT TOKEN-NEWLINE))))
           token-stream))
 
 
@@ -105,4 +129,17 @@
          tokens->html
          error-tokens?
          clean-token-stream)
+(provide TOKEN-COMA
+         TOKEN-ID
+         TOKEN-COLON
+         TOKEN-START-STATE
+         TOKEN-ACCEPT-STATES
+         TOKEN-KW-STATE
+         TOKEN-ALPHABET
+         TOKEN-DELTA
+         TOKEN-EOF
+         TOKEN-STATE
+         TOKEN-NEWLINE
+         TOKEN-COMMENT
+         tokenize-all)
 
