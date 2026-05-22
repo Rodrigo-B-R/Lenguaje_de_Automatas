@@ -3,10 +3,10 @@
 (require web-server/servlet)
 (require web-server/servlet-env)
 (require json)
-(require "tokenizar.rkt")
-(require "descenso-rec-base.rkt")
-(require "draw-graph-modulo.rkt")
-(require "automaton-simulation.rkt")
+(require "lexer.rkt")
+(require "parser.rkt")
+(require "graph-renderer.rkt")
+(require "validator.rkt")
 
 (define (errors->html errors)
   (string-append
