@@ -51,4 +51,8 @@
      (response/output #:code 200 #:mime-type #"text/html"
                       (lambda (out) (display (file->string "index.html") out)))]))
 
-(serve/servlet start #:launch-browser? #t #:servlet-path "/")
+(serve/servlet start
+               #:launch-browser? #f
+               #:servlet-path "/"
+               #:listen-ip #f
+               #:port (string->number (or (getenv "PORT") "8080")))

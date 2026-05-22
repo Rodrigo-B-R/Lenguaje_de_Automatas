@@ -51,10 +51,8 @@
 ; automata hash -> string base64 del PNG generado
 (define (genera-imagen automata)
   (define dot-text (genera-dot automata))
-  (parameterize ([current-directory here])
-    (call-with-output-file "dfa.dot" #:exists 'replace (lambda (out) (display dot-text out)))
-    (system "dot -Tpng dfa.dot -o dfa.png")
-    (displayln "dfa.png generated")
-    (bytes->string/latin-1 (base64-encode (file->bytes "dfa.png")))))
+  (call-with-output-file "/tmp/dfa.dot" #:exists 'replace (lambda (out) (display dot-text out)))
+  (system "dot -Tpng /tmp/dfa.dot -o /tmp/dfa.png")
+  (bytes->string/latin-1 (base64-encode (file->bytes "/tmp/dfa.png"))))
 
 (provide genera-imagen)
