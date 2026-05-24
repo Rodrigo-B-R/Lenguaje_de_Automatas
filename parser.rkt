@@ -12,6 +12,7 @@
 (define (res-toks     r) (first  r))
 (define (res-errors   r) (second r))
 (define (res-automata r) (third  r))
+
 (define (get-line-num toks)
   (let ([tok (car toks)])
     (if (>= (length tok) 3)
@@ -30,6 +31,7 @@
             [siguiente    (second transicion)]
             [delta-estado (hash-ref automata estado (hash))])
        (hash-set automata estado (hash-set delta-estado simbolo siguiente)))]))
+       
 
 ; Recolecta lexemas de una lista: state|ID , state|ID ...
 (define (collect-ids toks)
@@ -201,6 +203,8 @@
   (cond
     [(not (equal? ctok TOKEN-STATE))
      (resultado toks errors automata)]
+    [(< (length toks) 5)
+     (resultado toks (add-error errors "state : ID : state" ctok num-linea) automata)]
     [else
      (let ([t2 (caadr        toks)]
            [t3 (caaddr       toks)]
@@ -224,7 +228,11 @@
   (define num-linea (get-line-num toks))
 
   (cond
-    [(equal? ctok TOKEN-STATE)
+    [(not (equal? ctok TOKEN-STATE))
+     (resultado toks (add-error errors TOKEN-STATE ctok num-linea) automata)]
+    [(< (length toks) 5)
+     (resultado toks (add-error errors "state : ID : state" ctok num-linea) automata)]
+  [else
      (let ([t2 (caadr        toks)]
            [t3 (caaddr       toks)]
            [t4 (caar (cdddr  toks))]
@@ -239,9 +247,8 @@
                  [sym       (cadar (cddr   toks))]
                  [to        (cadar (cddddr toks))]
                  [automata* (add-automata automata from 'transicion (list sym to))])
-            (syn-deltaPrime (cdr (cddddr toks)) errors automata*))]))]
-    [else
-     (resultado toks (add-error errors TOKEN-STATE ctok num-linea) automata)]))
+            (syn-deltaPrime (cdr (cddddr toks)) errors automata*))])
+)]))
 
 ; delta: deltafirst
 (define (syn-delta toks errors automata)

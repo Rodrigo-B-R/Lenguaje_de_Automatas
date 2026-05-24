@@ -23,9 +23,6 @@
   (define regex (second label-regex))
   (define match (reMatch regex str))
 
-  ; Si hay match
-  ;    devuelve una lista asi: (list label lenMatch subStr)
-  ;    si no,  una lista asi:  (list "none" 0 "")
   (if match
       (let* ([lenMatch (cdr (first match))]
              [subStr (substring str 0 lenMatch)])
