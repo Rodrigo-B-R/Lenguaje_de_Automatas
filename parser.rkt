@@ -52,7 +52,11 @@
      (let ([ntok (caadr toks)])
        (cond
          [(equal? ntok TOKEN-STATE)
-          (syn-statesPrime (cddr toks) errors automata)]
+          (let ([state-id (cadadr toks)]
+                [states-list (hash-ref automata "states" '())])
+            (if (member state-id states-list)
+                (syn-statesPrime (cddr toks) errors automata)
+                (resultado (cddr toks) (add-error errors "estado definido" state-id num-linea) automata)))]
          [else
           (resultado toks (add-error errors TOKEN-STATE ntok num-linea) automata)]))]
     [else
@@ -62,9 +66,14 @@
 (define (syn-states toks errors automata)
   (define ctok (caar toks))
   (define num-linea (get-line-num toks))
+  (define state-id (cadr (car toks)))
+  (define states-list (hash-ref automata "states" '()))
 
   (cond
-    [(equal? ctok TOKEN-STATE) (syn-statesPrime (cdr toks) errors automata)]
+    [(equal? ctok TOKEN-STATE)
+     (if (member state-id states-list)
+         (syn-statesPrime (cdr toks) errors automata)
+         (resultado (cdr toks) (add-error errors "estado definido" state-id num-linea) automata))]
     [else (resultado toks (add-error errors TOKEN-STATE ctok num-linea) automata)]))
 
 
@@ -139,14 +148,18 @@
      (let ([ntok (caadr toks)])
        (cond
          [(equal? ntok TOKEN-COLON)
-          (let* ([state-toks (cddr toks)]
-                 [start-id   (and (pair? state-toks)
-                                  (equal? (caar state-toks) TOKEN-STATE)
-                                  (cadar state-toks))]
-                 [automata*  (if start-id
-                                 (add-automata automata start-id 'inicial #f)
-                                 automata)])
-            (syn-single-state state-toks errors automata*))]
+          (let* ([state-toks  (cddr toks)]
+                 [start-id    (and (pair? state-toks)
+                                   (equal? (caar state-toks) TOKEN-STATE)
+                                   (cadar state-toks))]
+                 [states-list (hash-ref automata "states" '())]
+                 [errors*     (if (and start-id (not (member start-id states-list)))
+                                  (add-error errors "estado definido" start-id (get-line-num state-toks))
+                                  errors)]
+                 [automata*   (if start-id
+                                  (add-automata automata start-id 'inicial #f)
+                                  automata)])
+            (syn-single-state state-toks errors* automata*))]
          [else
           (resultado toks (add-error errors TOKEN-COLON ntok num-linea) automata)]))]
     [else
@@ -216,11 +229,18 @@
          [(not (equal? t4 TOKEN-COLON)) (resultado toks (add-error errors TOKEN-COLON t4 num-linea) automata)]
          [(not (equal? t5 TOKEN-STATE)) (resultado toks (add-error errors TOKEN-STATE t5 num-linea) automata)]
          [else
-          (let* ([from      (cadar         toks)]
-                 [sym       (cadar (cddr   toks))]
-                 [to        (cadar (cddddr toks))]
-                 [automata* (add-automata automata from 'transicion (list sym to))])
-            (syn-deltaPrime (cdr (cddddr toks)) errors automata*))]))]))
+          (let* ([from        (cadar         toks)]
+                 [sym         (cadar (cddr   toks))]
+                 [to          (cadar (cddddr toks))]
+                 [states-list (hash-ref automata "states" '())]
+                 [errors*     (let ([e (if (not (member from states-list))
+                                           (add-error errors "estado definido" from num-linea)
+                                           errors)])
+                                 (if (not (member to states-list))
+                                     (add-error e "estado definido" to (get-line-num (cddddr toks)))
+                                     e))]
+                 [automata*   (add-automata automata from 'transicion (list sym to))])
+            (syn-deltaPrime (cdr (cddddr toks)) errors* automata*))]))]))
 
 ; deltafirst ::= state colon ID colon state deltaPrime
 (define (syn-deltafirst toks errors automata)
@@ -243,11 +263,18 @@
          [(not (equal? t4 TOKEN-COLON)) (resultado toks (add-error errors TOKEN-COLON t4 num-linea) automata)]
          [(not (equal? t5 TOKEN-STATE)) (resultado toks (add-error errors TOKEN-STATE t5 num-linea) automata)]
          [else
-          (let* ([from      (cadar         toks)]
-                 [sym       (cadar (cddr   toks))]
-                 [to        (cadar (cddddr toks))]
-                 [automata* (add-automata automata from 'transicion (list sym to))])
-            (syn-deltaPrime (cdr (cddddr toks)) errors automata*))])
+          (let* ([from        (cadar         toks)]
+                 [sym         (cadar (cddr   toks))]
+                 [to          (cadar (cddddr toks))]
+                 [states-list (hash-ref automata "states" '())]
+                 [errors*     (let ([e (if (not (member from states-list))
+                                           (add-error errors "estado definido" from num-linea)
+                                           errors)])
+                                 (if (not (member to states-list))
+                                     (add-error e "estado definido" to (get-line-num (cddddr toks)))
+                                     e))]
+                 [automata*   (add-automata automata from 'transicion (list sym to))])
+            (syn-deltaPrime (cdr (cddddr toks)) errors* automata*))])
 )]))
 
 ; delta: deltafirst
